@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, status
 from passlib.context import CryptContext
 from models import AuthRequest, AuthResponse
-from database import get_supabase_client
+from database import get_supabase
 
 router = APIRouter()
-supabase = get_supabase_client()
+supabase = get_supabase()
 
 # Password hashing setup using bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
