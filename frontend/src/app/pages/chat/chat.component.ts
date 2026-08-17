@@ -32,6 +32,15 @@ export class ChatComponent implements OnInit {
   currentSessionId = signal<string | null>(null);
   showUploadDialog = false;
   uploadScope: 'user' | 'global' = 'user';
+  sidebarOpen = signal(false);
+
+  toggleSidebar() {
+    this.sidebarOpen.update(v => !v);
+  }
+
+  closeSidebar() {
+    this.sidebarOpen.set(false);
+  }
 
   constructor(private api: ApiService, public auth: AuthService) {}
 

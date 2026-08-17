@@ -1,24 +1,69 @@
-# Chief of Staff RAG Backend
+# Chief Knowledge Officer RAG
 
-Enterprise RAG system built with **FastAPI** + **LangGraph** + **OpenAI** + **Supabase** (Storage + PostgreSQL) + **ChromaDB**.
+Enterprise chat assistant that answers from **your documents** first, then the **web** when internal knowledge is incomplete.
+
+| Layer | Stack |
+|---|---|
+| Frontend | Angular 20 |
+| Backend | FastAPI + LangGraph |
+| Models | OpenAI |
+| Search | ChromaDB (internal) + Tavily (web) |
+| Storage | Supabase (Postgres + file buckets) |
+
+---
+
+## How a question is answered
+
+```
+User question
+    │
+    ▼
+Orchestrator  →  casual chat  OR  RAG
+    │
+    ▼
+Knowledge Agent  (ChromaDB: user docs + global docs)
+    │
+    ▼
+Router
+    ├── sufficient     → answer from documents only
+    ├── partial        → documents + web search
+    └── insufficient   → web search only
+    │
+    ▼
+Blender  →  answer + citations + agent name
+```
+
+Sessions keep a rolling conversation summary (about 1024 tokens). Citations and the agent name are stored with each assistant message.
+
+---
+
+## Project layout
+
+```
+Chief-Knowledge-Officer-RAG-Agent/
+├── backend/          FastAPI API
+├── frontend/         Angular UI
+└── README.md         this file
+```
 
 ---
 
 ## Prerequisites
 
-| Tool | Purpose |
-|---|---|
-| Python ≥ 3.12 | Runtime |
-| [uv](https://docs.astral.sh/uv/) | Package manager |
-| Supabase project | Storage + PostgreSQL |
-| OpenAI API key | LLM + Embeddings |
-| Tavily API key | Web search (free tier at [tavily.com](https://tavily.com)) |
+- Python ≥ 3.12
+- Node.js 20+
+- A [Supabase](https://supabase.com) project
+- OpenAI API key
+- Tavily API key ([tavily.com](https://tavily.com))
 
 ---
 
-## Setup
+## 1. Backend setup
 
-### 1. Fill in `.env`
+### Environment
+
+Create `backend/.env`:
+
 ```env
 OPENAI_API_KEY=sk-...
 TAVILY_API_KEY=tvly-...
@@ -27,113 +72,115 @@ SUPABASE_SERVICE_KEY=eyJ...
 CHROMA_PERSIST_DIR=./chroma_db
 ```
 
-### 2. Create Supabase tables
-Open the **Supabase SQL Editor** and run the contents of:
-```
-backend/scripts/setup_tables.sql
-```
+### Database
 
-### 3. Create Supabase Storage buckets
-In the Supabase dashboard → Storage, create two buckets:
-- `user-documents` (private)
-- `global-documents` (private)
+In the **Supabase SQL Editor**, run the `SQL_CREATE_TABLES` script from `backend/database.py` (documents, users, sessions, chat messages, citations, agent name, conversation summary).
 
-### 4. Install dependencies
-```bash
-cd /path/to/project
-uv sync
-```
+If those tables already exist, still run the `ALTER TABLE` statements at the bottom of that SQL so citations and summaries persist.
 
-### 5. Start the server
+### Storage buckets
+
+In Supabase → **Storage**, create two **private** buckets:
+
+- `user-documents`
+- `global-documents`
+
+### Install and run
+
 ```bash
 cd backend
+pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-API docs at → **http://localhost:8000/docs**
+API docs: [http://localhost:8000/docs](http://localhost:8000/docs)  
+Health: [http://localhost:8000/health](http://localhost:8000/health)
 
 ---
 
-## API Reference
+## 2. Frontend setup
 
-### Documents
+API base URL is in `frontend/src/environments/environment.ts`.
 
-| Method | Path | Header | Description |
-|---|---|---|---|
-| `POST` | `/documents/upload-user-doc` | `X-User-ID` | Upload private document (auto-creates user folder) |
-| `POST` | `/documents/upload-global-doc` | `X-User-ID` | Upload global document |
-| `GET` | `/documents/my-docs` | `X-User-ID` | List caller's private docs |
-| `GET` | `/documents/global-docs` | `X-User-ID` | List all global docs |
-| `GET` | `/documents/accessible` | `X-User-ID` | List all accessible docs (own + global) |
-| `DELETE` | `/documents/{doc_id}` | `X-User-ID` | Delete own doc (cascades Storage + ChromaDB) |
+- Local backend: `http://localhost:8000`
+- Hosted backend: `https://your-fastapi-host.com` (no trailing slash)
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Open [http://localhost:4200](http://localhost:4200).
+
+HR users can upload **global** documents. Other users upload only their own files.
+
+---
+
+## 3. Deploy frontend on Vercel (Hobby / free)
+
+Vercel hosts the Angular UI only. FastAPI must already be public (for example Render).
+
+1. Set `apiBase` in `frontend/src/environments/environment.ts` to your live FastAPI origin.
+2. Push this repo to GitHub.
+3. On [vercel.com](https://vercel.com) → **Add New Project** → import the repo.
+4. Use these settings:
+
+| Setting | Value |
+|---|---|
+| Root Directory | `frontend` (or `Chief-Knowledge-Officer-RAG-Agent/frontend` if the repo parent is the Git root) |
+| Framework Preset | Other |
+| Build Command | `npm run build` |
+| Output Directory | `dist/frontend/browser` |
+| Install Command | `npm install` |
+
+5. Click **Deploy**. Open the `*.vercel.app` URL.
+
+`frontend/vercel.json` already rewrites Angular routes (`/login`, `/chat`) to `index.html`.
+
+---
+
+## API overview
+
+Most routes need header `X-User-ID` after login (the UI sends it automatically).
+
+### Auth
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/auth/signup` | Create account (`username`, `password`, `department`: `HR` or `Employee`) |
+| `POST` | `/auth/login` | Log in |
 
 ### Query
 
-| Method | Path | Header | Description |
-|---|---|---|---|
-| `POST` | `/query` | `X-User-ID` | Run the RAG pipeline |
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/query` | Run the RAG pipeline (`question`, optional `session_id`) |
 
-**Query request body:**
-```json
-{ "question": "What is our Q3 revenue?" }
-```
+### Sessions
 
-**Query response:**
-```json
-{
-  "question": "...",
-  "routing": "blended",        // "internal_only" | "web_only" | "blended"
-  "internal": {
-    "answer": "...",
-    "citations": ["report.pdf (chunk 2)"]
-  },
-  "web": {
-    "answer": "...",
-    "citations": ["https://example.com/article"]
-  }
-}
-```
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/sessions` | List chats |
+| `GET` | `/sessions/{id}/messages` | Load history (includes citations and agent name) |
+| `DELETE` | `/sessions/{id}` | Delete a chat |
+
+### Documents
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/documents/upload-user-doc` | Upload a private document |
+| `POST` | `/documents/upload-global-doc` | Upload a global document (HR) |
+| `GET` | `/documents/my-docs` | List own documents |
+| `GET` | `/documents/global-docs` | List global documents |
+| `GET` | `/documents/accessible` | Own + global |
+| `DELETE` | `/documents/{doc_id}` | Delete own document |
 
 ---
 
-## Architecture
+## Typical local workflow
 
-```
-POST /query
-    │
-    ▼
-knowledge_agent  →  router  →  [web_search]  →  blender  →  response
-    │               │
-    │               ├── "complete"  → skip web, go to blender
-    │               ├── "partial"   → web search + blend
-    │               └── "none"      → web search only
-    │
-    └── ChromaDB filter: (user_id == me) OR (scope == global)
-```
-
-**Per-user folder**: On first upload, Supabase Storage auto-creates the `user-documents/{user_id}/` prefix. All vectors in ChromaDB are tagged with `user_id`, so RAG is always scoped to that user's folder plus global docs.
-
----
-
-## File Structure
-
-```
-backend/
-├── main.py              ← FastAPI app
-├── config.py            ← env settings
-├── models.py            ← Pydantic schemas
-├── database.py          ← Supabase + ChromaDB clients
-├── ingest.py            ← upload → chunk → embed → store
-├── auth.py              ← X-User-ID header dependency
-├── graph.py             ← LangGraph StateGraph
-├── agents/
-│   ├── knowledge_agent.py   ← vector search (user + global)
-│   ├── router_node.py       ← LLM routing classifier
-│   ├── web_search_agent.py  ← Tavily search
-│   └── blender_node.py      ← final answer synthesis
-├── routers/
-│   ├── documents.py         ← upload / list / delete
-│   └── query.py             ← POST /query
-└── scripts/
-    └── setup_tables.sql     ← run once in Supabase
-```
+1. Start FastAPI on port `8000`.
+2. Point `environment.ts` at `http://localhost:8000`.
+3. Start Angular on port `4200`.
+4. Sign up / log in, upload a document, ask a question.

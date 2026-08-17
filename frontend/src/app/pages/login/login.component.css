@@ -142,3 +142,32 @@ input:focus {
   color: var(--primary-hover);
   text-decoration: underline;
 }
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 28px 20px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+
+  input {
+    font-size: 16px; /* prevents iOS zoom on focus */
+  }
+
+  .submit-btn {
+    font-size: 15px;
+    padding: 13px;
+  }
+}

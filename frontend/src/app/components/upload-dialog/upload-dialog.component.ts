@@ -40,8 +40,22 @@ import { ApiService } from '../../core/services/api.service';
             <input #fileInput type="file" hidden (change)="onFileSelected($event)" accept=".pdf,.txt,.docx,.doc,.md">
           </div>
 
-          <div class="status" *ngIf="status">
-            {{ status }}
+          <div class="status-uploading" *ngIf="isUploading && !uploadSuccess">
+            <span class="material-icons spin">sync</span>
+            Uploading and processing...
+          </div>
+
+          <div class="status-success" *ngIf="uploadSuccess">
+            <span class="material-icons">check_circle</span>
+            <div>
+              <div class="success-title">Document uploaded successfully!</div>
+              <div class="success-file">{{ selectedFile?.name }}</div>
+            </div>
+          </div>
+
+          <div class="status-error" *ngIf="errorMsg">
+            <span class="material-icons">error_outline</span>
+            {{ errorMsg }}
           </div>
         </div>
 
@@ -155,6 +169,68 @@ import { ApiService } from '../../core/services/api.service';
       color: var(--text-secondary);
     }
 
+    .status-uploading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .spin {
+      animation: spin 1s linear infinite;
+      font-size: 18px;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .status-success {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 8px;
+      color: #166534;
+    }
+    .status-success .material-icons {
+      font-size: 28px;
+      color: #22c55e;
+      flex-shrink: 0;
+    }
+    .success-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .success-file {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    .status-error {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #991b1b;
+    }
+    .status-error .material-icons {
+      font-size: 18px;
+      color: #ef4444;
+      flex-shrink: 0;
+    }
+
     .modal-footer {
       padding: 16px 24px;
       border-top: 1px solid var(--border-color);
@@ -188,6 +264,36 @@ import { ApiService } from '../../core/services/api.service';
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    /* ── Mobile ──────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .modal-content {
+        max-width: 100%;
+        width: 100%;
+        margin: 0;
+        border-radius: 16px 16px 0 0;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+
+      .modal-backdrop {
+        align-items: flex-end;
+      }
+
+      .modal-body {
+        padding: 16px;
+      }
+
+      .drop-zone {
+        padding: 28px 16px;
+      }
+
+      .modal-footer {
+        padding: 12px 16px;
+      }
+    }
   `]
 })
 export class UploadDialogComponent implements OnInit {
@@ -200,7 +306,8 @@ export class UploadDialogComponent implements OnInit {
   isDragging = false;
   selectedFile: File | null = null;
   isUploading = false;
-  status = '';
+  uploadSuccess = false;
+  errorMsg = '';
 
   constructor(private auth: AuthService, private api: ApiService) {
     this.isHR = this.auth.isHR;
@@ -225,14 +332,16 @@ export class UploadDialogComponent implements OnInit {
     this.isDragging = false;
     if (event.dataTransfer?.files?.length) {
       this.selectedFile = event.dataTransfer.files[0];
-      this.status = '';
+      this.uploadSuccess = false;
+      this.errorMsg = '';
     }
   }
 
   onFileSelected(event: any) {
     if (event.target.files?.length) {
       this.selectedFile = event.target.files[0];
-      this.status = '';
+      this.uploadSuccess = false;
+      this.errorMsg = '';
     }
   }
 
@@ -240,7 +349,8 @@ export class UploadDialogComponent implements OnInit {
     if (!this.selectedFile) return;
     
     this.isUploading = true;
-    this.status = 'Uploading and processing...';
+    this.uploadSuccess = false;
+    this.errorMsg = '';
 
     const req$ = this.scope === 'global' 
       ? this.api.uploadGlobalDoc(this.selectedFile)
@@ -248,12 +358,13 @@ export class UploadDialogComponent implements OnInit {
 
     req$.subscribe({
       next: (res) => {
-        this.status = 'Success!';
-        setTimeout(() => this.close.emit(), 1000);
+        this.isUploading = false;
+        this.uploadSuccess = true;
+        setTimeout(() => this.close.emit(), 2000);
       },
       error: (err) => {
         this.isUploading = false;
-        this.status = 'Upload failed: ' + (err.error?.detail || err.message);
+        this.errorMsg = 'Upload failed: ' + (err.error?.detail || err.message);
       }
     });
   }

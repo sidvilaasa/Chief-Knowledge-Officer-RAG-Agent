@@ -168,3 +168,92 @@ textarea {
   color: var(--text-secondary);
   margin-top: 12px;
 }
+
+/* ── Mobile top bar (hidden on desktop) ─────────────────────────────────── */
+.mobile-topbar {
+  display: none;
+}
+
+/* ── Sidebar overlay (hidden on desktop) ────────────────────────────────── */
+.sidebar-overlay {
+  display: none;
+}
+
+/* ── Mobile breakpoint ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Show the top bar */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--surface-color);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .hamburger-btn:hover {
+    background-color: var(--bg-color);
+  }
+  .hamburger-btn .material-icons {
+    font-size: 24px;
+  }
+
+  .mobile-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Dim overlay behind open sidebar */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 99;
+  }
+
+  /* Messages padding reduced on small screens */
+  .messages-container {
+    padding: 16px;
+  }
+
+  /* Input area tighter on mobile */
+  .input-area {
+    padding: 0 12px 16px;
+  }
+
+  /* Action bar wraps on very small screens */
+  .action-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Message thread full width */
+  .message-thread {
+    max-width: 100%;
+  }
+
+  /* Empty state fits small screen */
+  .empty-state {
+    max-width: 100%;
+    padding: 0 8px;
+  }
+  .empty-state h1 {
+    font-size: 20px;
+  }
+}

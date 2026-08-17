@@ -9,7 +9,7 @@ import { ThemeService } from '../../core/services/theme.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="sidebar">
+    <div class="sidebar" [class.open]="isOpen">
       <!-- Header -->
       <div class="header">
         <button class="new-chat-btn" (click)="onNewChat()">
@@ -227,10 +227,28 @@ import { ThemeService } from '../../core/services/theme.service';
     .footer-actions .icon-btn {
       flex: 1;
     }
+
+    /* ── Mobile ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+    }
   `]
 })
 export class SidebarComponent implements OnInit {
   @Input() currentSessionId: string | null = null;
+  @Input() isOpen = false;
   @Output() newChat = new EventEmitter<void>();
   @Output() selectSession = new EventEmitter<string>();
   

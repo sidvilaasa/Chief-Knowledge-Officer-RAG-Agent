@@ -1,11 +1,23 @@
 <div class="app-layout">
+  <!-- Mobile overlay to close sidebar by tapping outside -->
+  <div class="sidebar-overlay" *ngIf="sidebarOpen()" (click)="closeSidebar()"></div>
+
   <app-sidebar 
     [currentSessionId]="currentSessionId()"
-    (newChat)="startNewChat()"
-    (selectSession)="loadSession($event)">
+    [isOpen]="sidebarOpen()"
+    (newChat)="startNewChat(); closeSidebar()"
+    (selectSession)="loadSession($event); closeSidebar()">
   </app-sidebar>
 
   <main class="chat-main">
+    <!-- Mobile top bar -->
+    <div class="mobile-topbar">
+      <button class="hamburger-btn" (click)="toggleSidebar()" aria-label="Toggle menu">
+        <span class="material-icons">menu</span>
+      </button>
+      <span class="mobile-title">Chief Knowledge Officer</span>
+    </div>
+
     <!-- Messages Area -->
     <div class="messages-container" #messagesContainer>
       
