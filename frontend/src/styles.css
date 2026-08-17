@@ -78,3 +78,23 @@ input, textarea {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
+
+/* ── Global mobile tweaks ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Allow body to scroll on mobile (chat layout manages its own overflow) */
+  body {
+    overflow: hidden;
+  }
+
+  /* Prevent text size inflation on orientation change (iOS) */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Thinner scrollbar on mobile */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
