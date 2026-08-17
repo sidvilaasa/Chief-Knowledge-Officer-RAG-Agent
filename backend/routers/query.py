@@ -31,7 +31,7 @@ async def query(
     user_id: str = Depends(get_current_user),
 ):
     """
-    Run the Chief-of-Staff RAG pipeline.
+    Run the Chief-knowledge-officer RAG pipeline.
 
     The graph will:
     1. Search the user's accessible documents (own + global)
