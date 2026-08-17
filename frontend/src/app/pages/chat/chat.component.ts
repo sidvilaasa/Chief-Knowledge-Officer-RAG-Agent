@@ -33,6 +33,8 @@ export class ChatComponent implements OnInit {
   showUploadDialog = false;
   uploadScope: 'user' | 'global' = 'user';
   sidebarOpen = signal(false);
+  uploadToastFile = signal<string | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   toggleSidebar() {
     this.sidebarOpen.update(v => !v);
@@ -133,6 +135,12 @@ export class ChatComponent implements OnInit {
 
   closeUpload() {
     this.showUploadDialog = false;
+  }
+
+  onUploaded(filename: string) {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.uploadToastFile.set(filename);
+    this.toastTimer = setTimeout(() => this.uploadToastFile.set(null), 4000);
   }
 
   private scrollToBottom() {

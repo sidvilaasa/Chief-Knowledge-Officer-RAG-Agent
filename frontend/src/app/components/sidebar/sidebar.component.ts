@@ -239,6 +239,8 @@ import { ThemeService } from '../../core/services/theme.service';
         transform: translateX(-100%);
         transition: transform 0.25s ease;
         box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
+        /* Take zero space in the flex row when hidden */
+        flex-shrink: 0;
       }
       .sidebar.open {
         transform: translateX(0);

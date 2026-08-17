@@ -80,4 +80,13 @@
 
 <!-- Modals -->
 <!-- Modals -->
-<app-upload-dialog *ngIf="showUploadDialog" [initialScope]="uploadScope" (close)="closeUpload()"></app-upload-dialog>
+<app-upload-dialog *ngIf="showUploadDialog" [initialScope]="uploadScope" (close)="closeUpload()" (uploaded)="onUploaded($event)"></app-upload-dialog>
+
+<!-- Upload success toast -->
+<div class="upload-toast" *ngIf="uploadToastFile()">
+  <span class="material-icons">check_circle</span>
+  <div>
+    <div class="toast-title">Document uploaded successfully!</div>
+    <div class="toast-file">{{ uploadToastFile() }}</div>
+  </div>
+</div>
