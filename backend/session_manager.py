@@ -38,11 +38,11 @@ async def get_or_create_session(
             .select("*")
             .eq("id", session_id)
             .eq("user_id", user_id)
-            .maybe_single()
+            .limit(1)
             .execute()
         )
         if resp.data:
-            return resp.data
+            return resp.data[0]
 
     # ── Enforce session cap before creating ──────────────────────────────────
     await _enforce_session_cap(user_id)
