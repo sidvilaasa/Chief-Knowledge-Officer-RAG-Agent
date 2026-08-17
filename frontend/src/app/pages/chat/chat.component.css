@@ -182,6 +182,11 @@ textarea {
 /* ── Mobile breakpoint ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
 
+  /* Full viewport layout — sidebar is overlaid, not in flow */
+  .app-layout {
+    position: relative;
+  }
+
   /* Show the top bar */
   .mobile-topbar {
     display: flex;
@@ -201,9 +206,7 @@ textarea {
     color: var(--text-primary);
     padding: 4px;
     border-radius: 6px;
-  }
-  .hamburger-btn:hover {
-    background-color: var(--bg-color);
+    flex-shrink: 0;
   }
   .hamburger-btn .material-icons {
     font-size: 24px;
@@ -227,20 +230,32 @@ textarea {
     z-index: 99;
   }
 
-  /* Messages padding reduced on small screens */
-  .messages-container {
-    padding: 16px;
+  /* Chat main fills ALL available width — sidebar is overlaid above it */
+  .chat-main {
+    width: 100%;
+    min-width: 0;
   }
 
-  /* Input area tighter on mobile */
+  /* Messages padding reduced on small screens */
+  .messages-container {
+    padding: 12px;
+  }
+
+  /* Input area tighter on mobile, safe area for iOS home bar */
   .input-area {
-    padding: 0 12px 16px;
+    padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Prevent iOS zoom on textarea focus */
+  textarea {
+    font-size: 16px;
   }
 
   /* Action bar wraps on very small screens */
   .action-bar {
     flex-wrap: wrap;
     gap: 8px;
+    padding-left: 4px;
   }
 
   /* Message thread full width */
@@ -256,4 +271,61 @@ textarea {
   .empty-state h1 {
     font-size: 20px;
   }
+}
+
+/* ── Upload success toast ────────────────────────────────────────────────── */
+.upload-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #86efac;
+  border-radius: 14px;
+  padding: 20px 28px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  z-index: 2000;
+  animation: toast-in 0.25s ease;
+  max-width: 360px;
+  width: calc(100% - 48px);
+}
+
+[data-theme='dark'] .upload-toast {
+  background: #1a1a1a;
+  border-color: #166534;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.upload-toast .material-icons {
+  font-size: 36px;
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+.toast-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #166534;
+}
+
+[data-theme='dark'] .toast-title {
+  color: #4ade80;
+}
+
+.toast-file {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, -46%); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
 }

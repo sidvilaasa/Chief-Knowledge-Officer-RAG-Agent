@@ -40,17 +40,9 @@ import { ApiService } from '../../core/services/api.service';
             <input #fileInput type="file" hidden (change)="onFileSelected($event)" accept=".pdf,.txt,.docx,.doc,.md">
           </div>
 
-          <div class="status-uploading" *ngIf="isUploading && !uploadSuccess">
+          <div class="status-uploading" *ngIf="isUploading">
             <span class="material-icons spin">sync</span>
             Uploading and processing...
-          </div>
-
-          <div class="status-success" *ngIf="uploadSuccess">
-            <span class="material-icons">check_circle</span>
-            <div>
-              <div class="success-title">Document uploaded successfully!</div>
-              <div class="success-file">{{ selectedFile?.name }}</div>
-            </div>
           </div>
 
           <div class="status-error" *ngIf="errorMsg">
@@ -299,6 +291,7 @@ import { ApiService } from '../../core/services/api.service';
 export class UploadDialogComponent implements OnInit {
   @Input() initialScope: 'user' | 'global' = 'user';
   @Output() close = new EventEmitter<void>();
+  @Output() uploaded = new EventEmitter<string>();
   
   isHR = false;
   scope: 'user' | 'global' = 'user';
@@ -306,7 +299,6 @@ export class UploadDialogComponent implements OnInit {
   isDragging = false;
   selectedFile: File | null = null;
   isUploading = false;
-  uploadSuccess = false;
   errorMsg = '';
 
   constructor(private auth: AuthService, private api: ApiService) {
@@ -332,7 +324,6 @@ export class UploadDialogComponent implements OnInit {
     this.isDragging = false;
     if (event.dataTransfer?.files?.length) {
       this.selectedFile = event.dataTransfer.files[0];
-      this.uploadSuccess = false;
       this.errorMsg = '';
     }
   }
@@ -340,7 +331,6 @@ export class UploadDialogComponent implements OnInit {
   onFileSelected(event: any) {
     if (event.target.files?.length) {
       this.selectedFile = event.target.files[0];
-      this.uploadSuccess = false;
       this.errorMsg = '';
     }
   }
@@ -349,7 +339,6 @@ export class UploadDialogComponent implements OnInit {
     if (!this.selectedFile) return;
     
     this.isUploading = true;
-    this.uploadSuccess = false;
     this.errorMsg = '';
 
     const req$ = this.scope === 'global' 
@@ -359,8 +348,9 @@ export class UploadDialogComponent implements OnInit {
     req$.subscribe({
       next: (res) => {
         this.isUploading = false;
-        this.uploadSuccess = true;
-        setTimeout(() => this.close.emit(), 2000);
+        const filename = this.selectedFile!.name;
+        this.close.emit();
+        this.uploaded.emit(filename);
       },
       error: (err) => {
         this.isUploading = false;

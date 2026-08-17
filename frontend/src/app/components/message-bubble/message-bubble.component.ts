@@ -61,6 +61,18 @@ import { CommonModule } from '@angular/common';
       line-height: 1.6;
     }
 
+    @media (max-width: 768px) {
+      .bubble {
+        max-width: 88%;
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+      .message-row {
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+    }
+
     .user-bubble {
       background-color: var(--user-bubble);
       color: var(--user-text);
