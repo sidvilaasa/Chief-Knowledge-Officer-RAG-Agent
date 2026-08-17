@@ -1,0 +1,52 @@
+"""
+FastAPI Application Entry Point
+────────────────────────────────
+Chief of Staff RAG Backend
+"""
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from routers import documents, query
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown lifecycle."""
+    # Lazy-init is fine for Supabase & ChromaDB clients.
+    # Tables must already exist (see SQL in database.py and README).
+    yield
+
+
+app = FastAPI(
+    title="Chief of Staff RAG API",
+    description=(
+        "Enterprise RAG system with per-user document isolation, "
+        "global knowledge base, and intelligent web-search fallback. "
+        "Built with LangGraph + OpenAI + Supabase."
+    ),
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# ── CORS ──────────────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],        # tighten for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Routers ───────────────────────────────────────────────────────────────────
+app.include_router(documents.router)
+app.include_router(query.router)
+
+
+# ── Health check ──────────────────────────────────────────────────────────────
+@app.get("/health", tags=["Health"])
+async def health():
+    return {"status": "ok", "service": "Chief of Staff RAG API"}

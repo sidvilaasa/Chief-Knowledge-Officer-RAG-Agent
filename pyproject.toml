@@ -1,0 +1,31 @@
+[project]
+name = "project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "nagalapuram-sidvilaasa-sada", email = "nagalapuram.sidvilaasa@sada.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "python-multipart>=0.0.9",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "langchain>=0.2.0",
+    "langchain-openai>=0.1.0",
+    "langchain-community>=0.2.0",
+    "langgraph>=0.1.0",
+    "chromadb>=0.5.0",
+    "supabase>=2.5.0",
+    "tavily-python>=0.3.0",
+    "pypdf>=4.2.0",
+    "python-docx>=1.1.0",
+    "httpx>=0.27.0",
+    "langchain-text-splitters>=1.1.2",
+    "python-dotenv>=1.2.2",
+]
+
+[tool.uv]
+package = false
