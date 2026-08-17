@@ -42,7 +42,7 @@ app.add_middleware(
 )
 
 # ── Routers ───────────────────────────────────────────────────────────────────
-app.include_router(documents.router, prefix="/documents", tags=["Documents"])
+app.include_router(documents.router, tags=["Documents"])
 app.include_router(query.router)
 app.include_router(sessions.router)
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
