@@ -1,7 +1,7 @@
 """
 FastAPI Application Entry Point
 ────────────────────────────────
-Chief of Staff RAG Backend
+Chief Knowledge Officer  RAG Backend
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Chief of Staff RAG API",
+    title="Chief Knowledge Officer RAG API",
     description=(
         "Enterprise RAG system with per-user document isolation, "
         "global knowledge base, and intelligent web-search fallback. "
@@ -51,4 +51,4 @@ app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 # ── Health check ──────────────────────────────────────────────────────────────
 @app.get("/health", tags=["Health"])
 async def health():
-    return {"status": "ok", "service": "Chief of Staff RAG API"}
+    return {"status": "ok", "service": "Chief Knowledge Officer RAG API"}

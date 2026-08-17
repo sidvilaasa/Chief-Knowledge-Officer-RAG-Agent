@@ -18,11 +18,16 @@ _llm = ChatOpenAI(
     model=settings.chat_model,
     api_key=settings.openai_api_key,
     temperature=0,
+    max_tokens=1024,
 )
 
 SYSTEM_PROMPT = """You are a routing assistant. 
 Given a user question and context chunks retrieved from an internal knowledge base, 
 decide how well the question is answered.
+
+CRITICAL RULES:
+1. If the user explicitly asks to search the web, internet, or outside knowledge, you MUST NOT return "complete".
+2. If the user's question has multiple parts, and the context only answers one of them, return "partial".
 
 Reply with EXACTLY one word:
 - "complete"  – the context fully answers the question
