@@ -31,6 +31,7 @@ class AgentState(TypedDict, total=False):
     # Input
     question: str
     user_id: str
+    chat_history: list[dict]  # [{"role": "user"|"assistant", "content": str}]
 
     # Intermediate
     orchestration: str    # "casual" | "rag"
@@ -102,10 +103,14 @@ def build_graph() -> StateGraph:
 compiled_graph = build_graph().compile()
 
 
-async def run_query(question: str, user_id: str) -> dict:
+async def run_query(question: str, user_id: str, chat_history: list[dict] | None = None) -> dict:
     """Entry point called by the API router."""
     result = await compiled_graph.ainvoke(
-        {"question": question, "user_id": user_id}
+        {
+            "question": question,
+            "user_id": user_id,
+            "chat_history": chat_history or [],
+        }
     )
     return result.get("final_answer", {})
 

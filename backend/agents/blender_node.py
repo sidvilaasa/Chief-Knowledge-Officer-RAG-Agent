@@ -25,9 +25,6 @@ INTERNAL_ONLY_PROMPT = """You are an enterprise knowledge assistant.
 Answer the question using ONLY the provided internal document excerpts.
 Be concise, accurate, and professional.
 
-At the end, list the exact source references used as citations
-in the format:  • <filename>
-
 Question: {question}
 
 Internal Documents:
@@ -37,8 +34,6 @@ WEB_ONLY_PROMPT = """You are an enterprise knowledge assistant.
 Answer the question using ONLY the provided web search results.
 Be concise, accurate, and professional.
 
-At the end, list source URLs as citations:  • <url>
-
 Question: {question}
 
 Web Results:
@@ -47,7 +42,6 @@ Web Results:
 BLEND_INTERNAL_PROMPT = """You are an enterprise knowledge assistant.
 Write a partial answer using ONLY the provided internal document excerpts.
 Focus on what the internal docs can confirm.
-List source citations at the end:  • <filename>
 
 Question: {question}
 
@@ -57,7 +51,6 @@ Internal Documents:
 BLEND_WEB_PROMPT = """You are an enterprise knowledge assistant.
 Write a supplemental answer using ONLY the provided web search results,
 covering what the internal docs did NOT fully answer.
-List source URLs at the end:  • <url>
 
 Question: {question}
 

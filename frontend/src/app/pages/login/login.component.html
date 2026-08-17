@@ -1,0 +1,66 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="logo-container">
+      <span class="material-icons logo-icon">corporate_fare</span>
+    </div>
+    <h1 class="title">Chief of Staff RAG</h1>
+    <p class="subtitle">{{ isSignUp() ? 'Create your account' : 'Login to Knowledge Base' }}</p>
+    
+    <div class="form-group">
+      <label for="username">Username</label>
+      <input 
+        id="username" 
+        type="text" 
+        [ngModel]="username()" 
+        (ngModelChange)="username.set($event)"
+        (keyup.enter)="submit()"
+        placeholder="Enter your username" 
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input 
+        id="password" 
+        type="password" 
+        [ngModel]="password()" 
+        (ngModelChange)="password.set($event)"
+        (keyup.enter)="submit()"
+        placeholder="Enter your password" 
+      />
+    </div>
+
+    <div class="form-group" *ngIf="isSignUp()">
+      <label>Department</label>
+      <div class="dept-toggle">
+        <button 
+          class="toggle-btn" 
+          [class.active]="department() === 'Employee'" 
+          (click)="setDepartment('Employee')">
+          Employee
+        </button>
+        <button 
+          class="toggle-btn" 
+          [class.active]="department() === 'HR'" 
+          (click)="setDepartment('HR')">
+          HR
+        </button>
+      </div>
+    </div>
+
+    <div class="error-msg" *ngIf="errorMsg()">
+      {{ errorMsg() }}
+    </div>
+
+    <button class="submit-btn" [disabled]="!username().trim() || !password().trim() || isLoading()" (click)="submit()">
+      {{ isLoading() ? 'Please wait...' : (isSignUp() ? 'Sign Up' : 'Login') }}
+    </button>
+    
+    <div class="toggle-link">
+      <a href="javascript:void(0)" (click)="toggleMode()">
+        {{ isSignUp() ? 'Already have an account? Login' : 'Don\'t have an account? Sign up' }}
+      </a>
+    </div>
+  </div>
+</div>
