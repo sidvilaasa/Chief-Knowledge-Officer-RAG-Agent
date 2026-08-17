@@ -1,4 +1,4 @@
 export const environment = {
-  production: false,
-  apiBase: 'http://localhost:8000'
+  production: true,
+  apiBase: 'https://chief-knowledge-officer-rag-agent-backend.onrender.com'
 };
