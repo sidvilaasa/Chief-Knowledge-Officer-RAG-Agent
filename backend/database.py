@@ -62,6 +62,11 @@ def get_collection() -> chromadb.Collection:
 # Supabase SQL helpers
 # ──────────────────────────────────────────────
 
+# ── Session management limits ────────────────────────────────────────────────
+MAX_SESSIONS_PER_USER: int = 10
+MAX_MESSAGES_PER_SESSION: int = 10  # sliding window (user + assistant each count as 1)
+
+
 SQL_CREATE_TABLES = """
 CREATE TABLE IF NOT EXISTS documents (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -79,6 +84,31 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     chroma_id    TEXT NOT NULL,
     chunk_index  INT NOT NULL,
     created_at   TIMESTAMPTZ DEFAULT now()
+);
+
+-- Store user credentials securely
+CREATE TABLE IF NOT EXISTS app_users (
+    username TEXT PRIMARY KEY,
+    password_hash TEXT NOT NULL,
+    department TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Store RAG sessions
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    title TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    last_used_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id  UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    role        TEXT NOT NULL,
+    content     TEXT NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT now()
 );
 """
 

@@ -1,0 +1,70 @@
+<div class="app-layout">
+  <app-sidebar 
+    [currentSessionId]="currentSessionId"
+    (newChat)="startNewChat()"
+    (selectSession)="loadSession($event)">
+  </app-sidebar>
+
+  <main class="chat-main">
+    <!-- Messages Area -->
+    <div class="messages-container" #messagesContainer>
+      
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="messages.length === 0 && !isLoading">
+        <div class="logo-circle">
+          <span class="material-icons logo-icon">corporate_fare</span>
+        </div>
+        <h1>How can I help you today?</h1>
+        <p>Ask about company policies, upload documents, or search the global knowledge base.</p>
+      </div>
+
+      <!-- Message Thread -->
+      <div class="message-thread" *ngIf="messages.length > 0">
+        <app-message-bubble 
+          *ngFor="let msg of messages"
+          [role]="msg.role"
+          [content]="msg.content"
+          [citations]="$any(msg).citations">
+        </app-message-bubble>
+        
+        <app-typing-indicator *ngIf="isLoading"></app-typing-indicator>
+      </div>
+
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <div class="action-bar">
+        <button class="action-btn" (click)="openUpload('user')">
+          <span class="material-icons">upload_file</span>
+          Upload Document
+        </button>
+        <button class="action-btn" *ngIf="auth.isHR" (click)="openUpload('global')">
+          <span class="material-icons">public</span>
+          Upload Global Document
+        </button>
+      </div>
+
+      <div class="input-wrapper">
+        <textarea 
+          placeholder="Message Chief of Staff..." 
+          [(ngModel)]="inputMessage"
+          (keydown.enter)="$event.preventDefault(); sendMessage()"
+          rows="1"
+          autocomplete="off">
+        </textarea>
+        
+        <button class="send-btn" [disabled]="!inputMessage.trim() || isLoading" (click)="sendMessage()">
+          <span class="material-icons">send</span>
+        </button>
+      </div>
+      <div class="disclaimer">
+        RAG Agent can make mistakes. Consider verifying important information.
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modals -->
+<!-- Modals -->
+<app-upload-dialog *ngIf="showUploadDialog" [initialScope]="uploadScope" (close)="closeUpload()"></app-upload-dialog>

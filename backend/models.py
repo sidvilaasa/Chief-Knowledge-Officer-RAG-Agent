@@ -11,6 +11,16 @@ from pydantic import BaseModel
 # Documents
 # ──────────────────────────────────────────────
 
+class AuthRequest(BaseModel):
+    username: str
+    password: str
+    department: Optional[str] = None  # Required for signup, optional for login
+
+class AuthResponse(BaseModel):
+    message: str
+    username: str
+    department: str
+
 class DocumentMeta(BaseModel):
     id: UUID
     user_id: Optional[str]
@@ -38,6 +48,7 @@ class DocumentListResponse(BaseModel):
 
 class QueryRequest(BaseModel):
     question: str
+    session_id: Optional[str] = None  # omit to auto-create a new session
 
 
 class InternalResult(BaseModel):
@@ -52,7 +63,40 @@ class WebResult(BaseModel):
 
 class QueryResponse(BaseModel):
     question: str
+    session_id: str
+    session_title: Optional[str] = None
     routing: Literal["internal_only", "web_only", "blended", "casual"]
     internal: Optional[InternalResult] = None
     web: Optional[WebResult] = None
     casual_answer: Optional[str] = None
+
+
+# ──────────────────────────────────────────────
+# Sessions
+# ──────────────────────────────────────────────
+
+class SessionInfo(BaseModel):
+    id: str
+    user_id: str
+    title: Optional[str] = None
+    created_at: datetime
+    last_used_at: datetime
+
+
+class ChatMessage(BaseModel):
+    id: str
+    session_id: str
+    role: str
+    content: str
+    created_at: datetime
+
+
+class SessionListResponse(BaseModel):
+    sessions: list[SessionInfo]
+    total: int
+
+
+class SessionMessagesResponse(BaseModel):
+    session_id: str
+    messages: list[ChatMessage]
+    total: int
