@@ -1,38 +1,30 @@
 """
 Orchestrator Node
 ─────────────────
-Decides whether the query is a casual conversation or requires RAG.
+Decides whether the query is casual chat or requires RAG.
+
+Uses a fast heuristic first so greetings skip an extra LLM round-trip.
 """
 from __future__ import annotations
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
+import re
 
-from config import settings
-
-_llm = ChatOpenAI(
-    model=settings.chat_model,
-    api_key=settings.openai_api_key,
-    temperature=0.0,
+CASUAL_RE = re.compile(
+    r"^\s*("
+    r"hi|hello|hey|yo|sup|hiya|"
+    r"thanks|thank you|thx|"
+    r"good (morning|afternoon|evening|night)|"
+    r"how are you( doing)?|how's it going|"
+    r"who are you|what('?s| is) your name|"
+    r"ok|okay|cool|great|nice|"
+    r"bye|goodbye|see you"
+    r")[\s!.?]*$",
+    re.IGNORECASE,
 )
 
-PROMPT = """You are an orchestrator routing queries.
-Determine if the user's input is just a casual greeting/conversation without a specific informational request (e.g. "hi", "how are you", "who are you"), or if it is a real question that requires searching the knowledge base.
-
-Return EXACTLY ONE WORD:
-- "casual" (if greeting/casual chat)
-- "rag" (if it requires retrieving documents or answering a real question)
-
-User Input: {question}"""
 
 async def orchestrator_node(state: dict) -> dict:
-    question = state["question"]
-    resp = await _llm.ainvoke([
-        SystemMessage(content="You classify user queries."),
-        HumanMessage(content=PROMPT.format(question=question))
-    ])
-    
-    val = resp.content.strip().lower()
-    if "casual" in val:
+    question = (state.get("question") or "").strip()
+    if not question or CASUAL_RE.match(question):
         return {"orchestration": "casual"}
     return {"orchestration": "rag"}

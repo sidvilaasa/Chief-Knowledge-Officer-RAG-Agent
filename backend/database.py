@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
     title TEXT,
+    conversation_summary TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     last_used_at TIMESTAMPTZ DEFAULT now()
 );
@@ -108,8 +109,14 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     session_id  UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     role        TEXT NOT NULL,
     content     TEXT NOT NULL,
+    citations   JSONB NOT NULL DEFAULT '[]'::jsonb,
+    agent_name  TEXT,
     created_at  TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS conversation_summary TEXT;
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS citations JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS agent_name TEXT;
 """
 
 

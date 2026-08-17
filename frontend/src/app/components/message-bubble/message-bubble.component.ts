@@ -13,6 +13,7 @@ import { CommonModule } from '@angular/common';
       </div>
 
       <div class="bubble" [class.user-bubble]="role === 'user'" [class.assistant-bubble]="role === 'assistant'">
+        <div class="agent-name" *ngIf="role === 'assistant' && agentName">{{ agentName }}</div>
         <!-- Parse content. In a real app we'd use marked.js for markdown, here we use simple line breaks -->
         <div class="content" [innerHTML]="formatContent(content)"></div>
         
@@ -72,6 +73,15 @@ import { CommonModule } from '@angular/common';
       border-bottom-left-radius: 4px;
     }
 
+    .agent-name {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--primary-color);
+      margin-bottom: 8px;
+    }
+
     .content {
       white-space: pre-wrap;
     }
@@ -113,6 +123,7 @@ export class MessageBubbleComponent {
   @Input({ required: true }) role!: 'user' | 'assistant';
   @Input({ required: true }) content!: string;
   @Input() citations?: string[] = [];
+  @Input() agentName?: string | null;
 
   formatContent(text: string): string {
     if (!text) return '';
