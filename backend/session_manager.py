@@ -95,6 +95,12 @@ async def set_session_title(session_id: str, title: str) -> None:
     sb.table("sessions").update({"title": title[:200]}).eq("id", session_id).execute()
 
 
+async def set_session_summary(session_id: str, summary: str) -> None:
+    """Persist the rolling conversation summary (≤1024 tokens)."""
+    sb = get_supabase()
+    sb.table("sessions").update({"conversation_summary": summary}).eq("id", session_id).execute()
+
+
 async def delete_session(session_id: str, user_id: str) -> bool:
     """
     Hard-delete a session (cascade deletes its messages).
@@ -130,18 +136,32 @@ async def add_messages(
     session_id: str,
     user_question: str,
     assistant_answer: str,
+    citations: list[str] | None = None,
+    agent_name: str | None = None,
 ) -> None:
     """
     Insert a user + assistant message pair, then trim to the sliding window.
 
-    Inserts 2 rows and, if the total exceeds MAX_MESSAGES_PER_SESSION,
-    deletes the oldest rows to bring the count back to the limit.
+    Citations and agent_name are stored on the assistant row so they reload
+    with session history.
     """
     sb = get_supabase()
 
     sb.table("chat_messages").insert([
-        {"session_id": session_id, "role": "user",      "content": user_question},
-        {"session_id": session_id, "role": "assistant",  "content": assistant_answer},
+        {
+            "session_id": session_id,
+            "role": "user",
+            "content": user_question,
+            "citations": [],
+            "agent_name": None,
+        },
+        {
+            "session_id": session_id,
+            "role": "assistant",
+            "content": assistant_answer,
+            "citations": citations or [],
+            "agent_name": agent_name,
+        },
     ]).execute()
 
     await _trim_messages(session_id)

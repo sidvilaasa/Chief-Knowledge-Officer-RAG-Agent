@@ -22,13 +22,13 @@ async def web_search_agent_node(state: dict) -> dict:
     routing: str = state.get("routing", "none")
 
     # Only run if routing demands it
-    if routing == "complete":
+    if routing in ("complete", "sufficient"):
         return {"web_results": []}
 
     response = await _tavily.search(
         query=question,
         search_depth="basic",
-        max_results=5,
+        max_results=3,
         include_answer=False,
     )
 

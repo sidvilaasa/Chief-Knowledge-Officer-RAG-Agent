@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 # ──────────────────────────────────────────────
@@ -66,6 +66,7 @@ class QueryResponse(BaseModel):
     session_id: str
     session_title: Optional[str] = None
     routing: Literal["internal_only", "web_only", "blended", "casual"]
+    agent_name: Optional[str] = None
     internal: Optional[InternalResult] = None
     web: Optional[WebResult] = None
     casual_answer: Optional[str] = None
@@ -88,7 +89,18 @@ class ChatMessage(BaseModel):
     session_id: str
     role: str
     content: str
+    citations: list[str] = Field(default_factory=list)
+    agent_name: Optional[str] = None
     created_at: datetime
+
+    @field_validator("citations", mode="before")
+    @classmethod
+    def _coerce_citations(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value] if value else []
+        return value
 
 
 class SessionListResponse(BaseModel):

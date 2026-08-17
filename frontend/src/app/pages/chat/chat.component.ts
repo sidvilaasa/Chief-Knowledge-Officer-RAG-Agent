@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, ChatMessage } from '../../core/services/api.service';
@@ -12,10 +12,10 @@ import { AuthService } from '../../core/services/auth.service';
   selector: 'app-chat',
   standalone: true,
   imports: [
-    CommonModule, 
-    FormsModule, 
-    SidebarComponent, 
-    MessageBubbleComponent, 
+    CommonModule,
+    FormsModule,
+    SidebarComponent,
+    MessageBubbleComponent,
     TypingIndicatorComponent,
     UploadDialogComponent
   ],
@@ -26,84 +26,92 @@ export class ChatComponent implements OnInit {
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
   @ViewChild(SidebarComponent) private sidebar!: SidebarComponent;
 
-  messages: ChatMessage[] = [];
+  messages = signal<ChatMessage[]>([]);
   inputMessage = '';
-  isLoading = false;
-  currentSessionId: string | null = null;
+  isLoading = signal(false);
+  currentSessionId = signal<string | null>(null);
   showUploadDialog = false;
   uploadScope: 'user' | 'global' = 'user';
 
   constructor(private api: ApiService, public auth: AuthService) {}
 
   ngOnInit(): void {
-    // Start with empty state, let user start a new chat or pick one from sidebar
+    // Sidebar loads sessions via signals (zoneless CD).
   }
 
   startNewChat() {
-    this.currentSessionId = null;
-    this.messages = [];
+    this.currentSessionId.set(null);
+    this.messages.set([]);
+    this.isLoading.set(false);
   }
 
   loadSession(sessionId: string) {
-    this.currentSessionId = sessionId;
-    this.isLoading = true;
-    this.messages = [];
-    
+    this.currentSessionId.set(sessionId);
+    this.isLoading.set(true);
+    this.messages.set([]);
+
     this.api.getSessionMessages(sessionId).subscribe({
       next: (res) => {
-        this.messages = res.messages;
-        this.isLoading = false;
+        this.messages.set(res.messages ?? []);
+        this.isLoading.set(false);
         this.scrollToBottom();
       },
       error: () => {
-        this.isLoading = false;
+        this.isLoading.set(false);
       }
     });
   }
 
   sendMessage() {
     const text = this.inputMessage.trim();
-    if (!text || this.isLoading) return;
+    if (!text || this.isLoading()) return;
 
-    // Add user message to UI immediately
-    this.messages.push({ role: 'user', content: text });
+    this.messages.update(msgs => [...msgs, { role: 'user', content: text }]);
     this.inputMessage = '';
-    this.isLoading = true;
+    this.isLoading.set(true);
     this.scrollToBottom();
 
-    // Call API
-    this.api.sendQuery({ question: text, session_id: this.currentSessionId || undefined }).subscribe({
+    this.api.sendQuery({
+      question: text,
+      session_id: this.currentSessionId() || undefined
+    }).subscribe({
       next: (res) => {
-        this.isLoading = false;
-        this.currentSessionId = res.session_id; // Set if it was a new session
-        
+        this.isLoading.set(false);
+        this.currentSessionId.set(res.session_id);
+
+        const citations = [
+          ...(res.internal?.citations ?? []),
+          ...(res.web?.citations ?? [])
+        ].filter((c, i, arr) => c && arr.indexOf(c) === i);
+
         let answerText = res.casual_answer || '';
-        let citations: string[] = [];
-        
-        if (res.internal) {
+        if (res.internal?.answer && res.web?.answer) {
+          answerText = `${res.internal.answer}\n\n${res.web.answer}`;
+        } else if (res.internal?.answer) {
           answerText = res.internal.answer;
-          citations = res.internal.citations;
-        } else if (res.web) {
+        } else if (res.web?.answer) {
           answerText = res.web.answer;
-          citations = res.web.citations;
         }
 
-        this.messages.push({ 
-          role: 'assistant', 
-          content: answerText, 
-          ...((citations && citations.length > 0) ? { citations } : {}) 
-        } as any); // Type cast due to extra citations property not strictly in ChatMessage
-        
+        this.messages.update(msgs => [...msgs, {
+          role: 'assistant',
+          content: answerText,
+          citations,
+          agent_name: res.agent_name || null
+        }]);
+
         this.scrollToBottom();
-        
-        // Refresh sidebar to update title/new session
+
         if (this.sidebar) {
           this.sidebar.loadSessions();
         }
       },
-      error: (err) => {
-        this.isLoading = false;
-        this.messages.push({ role: 'assistant', content: 'Sorry, there was an error processing your request.' });
+      error: () => {
+        this.isLoading.set(false);
+        this.messages.update(msgs => [...msgs, {
+          role: 'assistant',
+          content: 'Sorry, there was an error processing your request.'
+        }]);
         this.scrollToBottom();
       }
     });
@@ -113,7 +121,7 @@ export class ChatComponent implements OnInit {
     this.uploadScope = scope;
     this.showUploadDialog = true;
   }
-  
+
   closeUpload() {
     this.showUploadDialog = false;
   }
@@ -124,7 +132,9 @@ export class ChatComponent implements OnInit {
         if (this.messagesContainer) {
           this.messagesContainer.nativeElement.scrollTop = this.messagesContainer.nativeElement.scrollHeight;
         }
-      } catch(err) {}
+      } catch {
+        // ignore
+      }
     }, 100);
   }
 }

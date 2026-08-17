@@ -31,8 +31,13 @@ async def knowledge_agent_node(state: dict) -> dict:
     user_id: str = state["user_id"]
     collection = get_collection()
 
-    # Embed the question
-    query_vector = await embeddings.aembed_query(question)
+    summary = (state.get("chat_history_summary") or "").strip()
+    embed_text = (
+        f"{summary[-800:]}\n\nCurrent question: {question}" if summary else question
+    )
+
+    # Embed the question (plus rolling history so follow-ups retrieve correctly)
+    query_vector = await embeddings.aembed_query(embed_text)
 
     # Query ChromaDB – filter: user's own docs OR global docs
     results = collection.query(

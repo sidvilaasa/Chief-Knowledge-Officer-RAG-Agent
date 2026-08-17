@@ -1,61 +1,31 @@
 """
 Blender Node
 ────────────
-Final synthesis — produces a structured two-section answer with citations.
-
-Reads:  state["question"], state["routing"],
-        state["internal_chunks"], state["web_results"]
-Writes: state["final_answer"]  (dict matching QueryResponse shape)
+Final synthesis — one LLM call, with citations and a rolling history summary.
 """
 from __future__ import annotations
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
 from config import settings
 
+AGENT_NAMES = {
+    "sufficient": "Knowledge Agent",
+    "partial": "Knowledge + Web Agent",
+    "insufficient": "Web Search Agent",
+    "complete": "Knowledge Agent",
+    "none": "Web Search Agent",
+}
 
 _llm = ChatOpenAI(
+    model=settings.chat_model,
     api_key=settings.openai_api_key,
     temperature=0.2,
-    max_tokens=1024,
+    max_tokens=700,
 )
 
-INTERNAL_ONLY_PROMPT = """You are an enterprise knowledge assistant.
-Answer the question using ONLY the provided internal document excerpts.
-Be concise, accurate, and professional.
-
-Question: {question}
-
-Internal Documents:
-{context}"""
-
-WEB_ONLY_PROMPT = """You are an enterprise knowledge assistant.
-Answer the question using ONLY the provided web search results.
-Be concise, accurate, and professional.
-
-Question: {question}
-
-Web Results:
-{context}"""
-
-BLEND_INTERNAL_PROMPT = """You are an enterprise knowledge assistant.
-Write a partial answer using ONLY the provided internal document excerpts.
-Focus on what the internal docs can confirm.
-
-Question: {question}
-
-Internal Documents:
-{context}"""
-
-BLEND_WEB_PROMPT = """You are an enterprise knowledge assistant.
-Write a supplemental answer using ONLY the provided web search results,
-covering what the internal docs did NOT fully answer.
-
-Question: {question}
-
-Web Results:
-{context}"""
+SYSTEM = "You are a professional enterprise knowledge assistant. Be concise and accurate."
 
 
 def _format_internal(chunks: list[dict]) -> str:
@@ -73,7 +43,6 @@ def _format_web(results: list[dict]) -> str:
 
 
 def _extract_citations_internal(chunks: list[dict]) -> list[str]:
-    # Deduplicate citations to only show unique document filenames
     return list(dict.fromkeys(c["filename"] for c in chunks))
 
 
@@ -81,86 +50,82 @@ def _extract_citations_web(results: list[dict]) -> list[str]:
     return [r["url"] for r in results if r.get("url")]
 
 
+def _history_block(summary: str) -> str:
+    summary = (summary or "").strip()
+    if not summary:
+        return ""
+    return f"Conversation so far (summary, ≤1024 tokens):\n{summary}\n\n"
+
+
 async def blender_node(state: dict) -> dict:
-    """LangGraph node: produce final answer."""
     question: str = state["question"]
-    routing: str = state.get("routing", "none")
+    routing: str = state.get("routing", "insufficient")
     chunks: list = state.get("internal_chunks", [])
     web_results: list = state.get("web_results", [])
+    history = _history_block(state.get("chat_history_summary") or "")
 
-    final: dict = {"question": question, "routing": routing}
+    final: dict = {
+        "question": question,
+        "routing": routing,
+        "agent_name": AGENT_NAMES.get(routing, "Knowledge Agent"),
+    }
 
-    if routing == "complete":
-        # Internal only
-        context = _format_internal(chunks)
+    if routing in ("sufficient", "complete"):
+        prompt = (
+            f"{history}"
+            "Answer the question using ONLY the internal document excerpts. "
+            "Use prior conversation only for context.\n\n"
+            f"Question: {question}\n\nInternal Documents:\n{_format_internal(chunks)}"
+        )
         resp = await _llm.ainvoke(
-            [
-                SystemMessage(content="You are a professional knowledge assistant."),
-                HumanMessage(
-                    content=INTERNAL_ONLY_PROMPT.format(
-                        question=question, context=context
-                    )
-                ),
-            ]
+            [SystemMessage(content=SYSTEM), HumanMessage(content=prompt)]
         )
         final["internal"] = {
             "answer": resp.content,
             "citations": _extract_citations_internal(chunks),
         }
         final["web"] = None
+        return {"final_answer": final}
 
-    elif routing == "none":
-        # Web only
-        context = _format_web(web_results)
+    if routing in ("insufficient", "none") or not chunks:
+        prompt = (
+            f"{history}"
+            "Answer the question using ONLY the web search results. "
+            "Use prior conversation only for context.\n\n"
+            f"Question: {question}\n\nWeb Results:\n{_format_web(web_results)}"
+        )
         resp = await _llm.ainvoke(
-            [
-                SystemMessage(content="You are a professional knowledge assistant."),
-                HumanMessage(
-                    content=WEB_ONLY_PROMPT.format(
-                        question=question, context=context
-                    )
-                ),
-            ]
+            [SystemMessage(content=SYSTEM), HumanMessage(content=prompt)]
         )
         final["internal"] = None
         final["web"] = {
             "answer": resp.content,
             "citations": _extract_citations_web(web_results),
         }
+        final["agent_name"] = AGENT_NAMES["insufficient"]
+        return {"final_answer": final}
 
-    else:
-        # Blended (partial)
-        int_context = _format_internal(chunks)
-        int_resp = await _llm.ainvoke(
-            [
-                SystemMessage(content="You are a professional knowledge assistant."),
-                HumanMessage(
-                    content=BLEND_INTERNAL_PROMPT.format(
-                        question=question, context=int_context
-                    )
-                ),
-            ]
-        )
-
-        web_context = _format_web(web_results)
-        web_resp = await _llm.ainvoke(
-            [
-                SystemMessage(content="You are a professional knowledge assistant."),
-                HumanMessage(
-                    content=BLEND_WEB_PROMPT.format(
-                        question=question, context=web_context
-                    )
-                ),
-            ]
-        )
-
-        final["internal"] = {
-            "answer": int_resp.content,
-            "citations": _extract_citations_internal(chunks),
-        }
-        final["web"] = {
-            "answer": web_resp.content,
-            "citations": _extract_citations_web(web_results),
-        }
-
+    # partial — single synthesis call (previously two sequential LLM calls)
+    prompt = (
+        f"{history}"
+        "Write one coherent answer in two labeled sections:\n"
+        "1) Internal knowledge — what the document excerpts confirm.\n"
+        "2) Web supplement — what the web results add that internal docs did not cover.\n"
+        "Do not invent sources.\n\n"
+        f"Question: {question}\n\n"
+        f"Internal Documents:\n{_format_internal(chunks)}\n\n"
+        f"Web Results:\n{_format_web(web_results)}"
+    )
+    resp = await _llm.ainvoke(
+        [SystemMessage(content=SYSTEM), HumanMessage(content=prompt)]
+    )
+    answer = resp.content
+    final["internal"] = {
+        "answer": answer,
+        "citations": _extract_citations_internal(chunks),
+    }
+    final["web"] = {
+        "answer": "",
+        "citations": _extract_citations_web(web_results),
+    }
     return {"final_answer": final}

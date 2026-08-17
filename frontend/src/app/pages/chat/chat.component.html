@@ -1,6 +1,6 @@
 <div class="app-layout">
   <app-sidebar 
-    [currentSessionId]="currentSessionId"
+    [currentSessionId]="currentSessionId()"
     (newChat)="startNewChat()"
     (selectSession)="loadSession($event)">
   </app-sidebar>
@@ -10,7 +10,7 @@
     <div class="messages-container" #messagesContainer>
       
       <!-- Empty State -->
-      <div class="empty-state" *ngIf="messages.length === 0 && !isLoading">
+      <div class="empty-state" *ngIf="messages().length === 0 && !isLoading()">
         <div class="logo-circle">
           <span class="material-icons logo-icon">corporate_fare</span>
         </div>
@@ -19,15 +19,16 @@
       </div>
 
       <!-- Message Thread -->
-      <div class="message-thread" *ngIf="messages.length > 0">
+      <div class="message-thread" *ngIf="messages().length > 0 || isLoading()">
         <app-message-bubble 
-          *ngFor="let msg of messages"
+          *ngFor="let msg of messages()"
           [role]="msg.role"
           [content]="msg.content"
-          [citations]="$any(msg).citations">
+          [citations]="msg.citations"
+          [agentName]="msg.agent_name">
         </app-message-bubble>
         
-        <app-typing-indicator *ngIf="isLoading"></app-typing-indicator>
+        <app-typing-indicator *ngIf="isLoading()"></app-typing-indicator>
       </div>
 
     </div>
@@ -54,7 +55,7 @@
           autocomplete="off">
         </textarea>
         
-        <button class="send-btn" [disabled]="!inputMessage.trim() || isLoading" (click)="sendMessage()">
+        <button class="send-btn" [disabled]="!inputMessage.trim() || isLoading()" (click)="sendMessage()">
           <span class="material-icons">send</span>
         </button>
       </div>

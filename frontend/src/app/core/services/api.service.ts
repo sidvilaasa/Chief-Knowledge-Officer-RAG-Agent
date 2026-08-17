@@ -9,6 +9,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   created_at?: string;
+  citations?: string[];
+  agent_name?: string | null;
 }
 
 export interface Session {
@@ -29,6 +31,7 @@ export interface QueryResponse {
   session_id: string;
   session_title: string | null;
   routing: string;
+  agent_name?: string | null;
   internal?: { answer: string; citations: string[] } | null;
   web?: { answer: string; citations: string[] } | null;
   casual_answer?: string | null;

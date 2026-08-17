@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService, Session } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -22,7 +22,7 @@ import { ThemeService } from '../../core/services/theme.service';
       <div class="session-list">
         <div class="section-title">Recent Chats</div>
         
-        <div class="session-item" *ngFor="let s of sessions" 
+        <div class="session-item" *ngFor="let s of sessions()" 
              [class.active]="s.id === currentSessionId"
              (click)="onSelectSession(s.id)">
           <span class="material-icons session-icon">chat_bubble_outline</span>
@@ -33,7 +33,7 @@ import { ThemeService } from '../../core/services/theme.service';
           </button>
         </div>
         
-        <div class="empty-state" *ngIf="sessions.length === 0">
+        <div class="empty-state" *ngIf="sessions().length === 0">
           No recent chats
         </div>
       </div>
@@ -234,7 +234,7 @@ export class SidebarComponent implements OnInit {
   @Output() newChat = new EventEmitter<void>();
   @Output() selectSession = new EventEmitter<string>();
   
-  sessions: Session[] = [];
+  sessions = signal<Session[]>([]);
   
   constructor(
     public auth: AuthService,
@@ -262,7 +262,7 @@ export class SidebarComponent implements OnInit {
   loadSessions() {
     this.api.listSessions().subscribe({
       next: (res) => {
-        this.sessions = res.sessions;
+        this.sessions.set(res.sessions ?? []);
       }
     });
   }
@@ -280,7 +280,7 @@ export class SidebarComponent implements OnInit {
     if(confirm('Are you sure you want to delete this chat?')) {
       this.api.deleteSession(id).subscribe({
         next: () => {
-          this.sessions = this.sessions.filter(s => s.id !== id);
+          this.sessions.update(list => list.filter(s => s.id !== id));
           if (this.currentSessionId === id) {
             this.newChat.emit();
           }
